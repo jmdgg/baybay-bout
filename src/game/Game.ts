@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { Loop } from '../core/Loop';
 import { createRenderer, resizeRenderer } from '../core/Renderer';
+import { AutoResolution } from '../core/AutoResolution';
 import { Aswang } from '../entities/Aswang';
 import { Babaylan, PALETTES } from '../entities/Babaylan';
 import { AudioSystem } from '../systems/AudioSystem';
@@ -60,6 +61,7 @@ export class Game {
   private readonly debugTools: DebugTools;
   private readonly loop = new Loop((dt, t) => this.update(dt, t), () => this.render());
   private readonly tuning: DebugTuning = { exposure: 1.0, maxDpr: 2 };
+  private readonly autoResolution = new AutoResolution();
   // Route ALL gameplay randomness through this.rng so the seed() test hook keeps captures and bot runs reproducible.
   private rng = createSeededRandom(1);
 
@@ -410,6 +412,7 @@ export class Game {
   // --- frame ----------------------------------------------------------------------------------------------------
   private update(dt: number, elapsed: number): void {
     this.frame += 1;
+    this.tuning.maxDpr = this.autoResolution.update(elapsed * 1000, this.tuning.maxDpr, window.devicePixelRatio || 1);
     resizeRenderer(this.renderer, this.camera, this.tuning.maxDpr);
     if (this.pausedForScreenshot) { this.publishDiagnostics(); return; }
     this.time = this.reducedMotion ? 0 : elapsed;

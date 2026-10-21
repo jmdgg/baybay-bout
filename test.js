@@ -6,6 +6,7 @@ import { createBattle, castSpell, tick, canCast, HP, WINDUP_MS } from './src/bat
 import { nextMastery, fitToCanvas, MASTERY, STROKE_TYPES } from './src/guide.js';
 import { Rooms, validateCast, VERSUS_HP, COUNTDOWN_MS } from './server/rooms.js';
 import { padUrls } from './server/duel-plugin.ts';
+import { AutoResolution, MIN_DPR } from './src/core/AutoResolution.ts';
 
 const load = file => JSON.parse(readFileSync(new URL(file, import.meta.url)));
 const letters = load('./glyphs.json'), { spells } = load('./spells.json');
@@ -322,6 +323,21 @@ for (const l of letters.filter(l => l.order)) {
   const ip = (address) => ({ family: 'IPv4', internal: false, address });
   const adapters = { 'Radmin VPN': [ip('26.201.33.67')], 'Ethernet 2': [ip('192.168.56.1')], 'Ethernet': [ip('192.168.100.214')], 'Wi-Fi': [ip('10.0.0.7')] };
   assert.deepEqual(padUrls(listening, adapters), ['http://10.0.0.7:5188/pad.html', 'http://192.168.100.214:5188/pad.html', 'http://192.168.56.1:5188/pad.html']);
+}
+
+// auto resolution: steady 60 fps keeps it; 2 s at 30 fps drops one step from the screen's own ratio; hidden-tab gaps are ignored
+{
+  const run = (fps, seconds, dpr = 2, device = 1, auto = new AutoResolution(), start = 0) => {
+    for (let t = start; t <= start + seconds * 1000; t += 1000 / fps) dpr = auto.update(t, dpr, device);
+    return dpr;
+  };
+  assert.equal(run(60, 10), 2);
+  assert.equal(run(30, 2.1), 0.75);
+  assert.equal(run(30, 30), MIN_DPR);
+  const auto = new AutoResolution();
+  assert.equal(auto.update(0, 2, 1), 2);
+  assert.equal(auto.update(5000, 2, 1), 2); // a 5 s gap (tab hidden) is not a slow frame
+  assert.equal(run(60, 4, 2, 1, auto, 5000), 2);
 }
 
 // power formula

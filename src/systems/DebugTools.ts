@@ -14,7 +14,7 @@ export class DebugTools {
     if (!enabled) return;
 
     this.gui = new GUI({ title: 'Baybay-Bout tuning' });
-    this.gui.add(tuning, 'maxDpr', 1, 2, 0.25).onChange(onChange);
+    this.gui.add(tuning, 'maxDpr', 0.5, 2, 0.25).onChange(onChange).listen(); // listen: the auto drop changes it too
     this.gui.add(tuning, 'exposure', 0.6, 1.8, 0.01).onChange(onChange);
   }
 
