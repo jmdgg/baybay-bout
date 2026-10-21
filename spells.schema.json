@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Baybay-Bout spell list",
+  "type": "object",
+  "required": ["spells"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "spells": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "element", "root", "glyph", "parTimeMs", "rechargeMs", "variations"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "lore": { "type": "string" },
+          "element": { "enum": ["apoy", "tubig", "hangin", "lupa", "kidlat"] },
+          "root": { "type": "string", "pattern": "^[a-z]+a$", "description": "Romanized root syllable with inherent vowel a, e.g. 'ba'" },
+          "glyph": { "type": "string", "pattern": "^[\\u1700-\\u1711]$", "description": "Unicode Baybayin base character; its drawing template lives in glyphs.json" },
+          "parTimeMs": { "type": "integer", "minimum": 1, "description": "Cast time that earns a 1.0 time bonus" },
+          "rechargeMs": { "type": "integer", "minimum": 0, "description": "Skill-slot recharge after a successful cast; stronger spells recharge longer" },
+          "variations": {
+            "description": "Keyed by kudlit: a = none, i = kudlit above (i/e), u = kudlit below (u/o)",
+            "type": "object", "required": ["a", "i", "u"], "additionalProperties": false,
+            "properties": { "a": { "$ref": "#/$defs/variation" }, "i": { "$ref": "#/$defs/variation" }, "u": { "$ref": "#/$defs/variation" } }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "variation": {
+      "type": "object",
+      "required": ["effect", "baseDamage"],
+      "properties": {
+        "effect": { "enum": ["projectile", "burn", "knockback", "slow", "stun", "shield", "heal"] },
+        "baseDamage": { "type": "number", "minimum": 0, "description": "Damage, or absorb/heal amount for shield/heal" },
+        "durationMs": { "type": "integer", "minimum": 0 },
+        "note": { "type": "string" }
+      }
+    }
+  }
+}

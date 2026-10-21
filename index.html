@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#1b1410" />
+    <meta name="description" content="Baybay-Bout: a Babaylan duels an Aswang by writing Baybayin script." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23d9a441'/%3E%3Cpath d='M20 22c8-6 24-6 24 8s-16 16-24 10' stroke='%231b1410' stroke-width='6' fill='none'/%3E%3C/svg%3E" />
+    <title>Baybay-Bout</title>
+  </head>
+  <body>
+    <main id="app">
+      <canvas id="game-canvas" aria-label="The duel field"></canvas>
+
+      <!-- battle HUD -->
+      <div id="hud" hidden>
+        <section class="fighter" id="player-card" aria-label="Your Babaylan">
+          <div class="emblem" lang="tl-Tglg" aria-hidden="true">ᜊᜊᜌ᜔ᜎᜈ᜔</div>
+          <div class="fighter-body">
+            <div class="fighter-name"><strong id="player-name">Babaylan</strong><span class="hp-num" id="player-hp-num">100</span></div>
+            <div class="hp"><div class="hp-trail" id="player-trail"></div><div class="hp-fill" id="player-fill"></div></div>
+            <ul class="chips" id="player-chips"></ul>
+            <p class="last-cast" id="player-last" aria-live="polite"></p>
+          </div>
+        </section>
+
+        <section id="incoming" aria-live="assertive">
+          <div class="incoming-ring" id="incoming-ring"><span lang="tl-Tglg" aria-hidden="true" id="incoming-glyph"></span></div>
+          <span class="sr" id="incoming-sr"></span>
+          <div class="incoming-text"><strong id="incoming-time"></strong><span>Shield, or stun to interrupt</span></div>
+        </section>
+
+        <section class="fighter enemy" id="enemy-card" aria-label="The Aswang">
+          <div class="fighter-body">
+            <div class="fighter-name"><span class="hp-num" id="enemy-hp-num">100</span><strong id="enemy-name">Aswang</strong></div>
+            <div class="hp"><div class="hp-trail" id="enemy-trail"></div><div class="hp-fill" id="enemy-fill"></div></div>
+            <ul class="chips" id="enemy-chips"></ul>
+            <p class="last-cast" id="enemy-last" aria-live="polite"></p>
+          </div>
+          <div class="emblem" lang="tl-Tglg" aria-hidden="true" id="enemy-emblem">ᜀᜐ᜔ᜏᜅ᜔</div>
+        </section>
+
+        <p id="versus-banner" aria-live="assertive"></p>
+        <div id="toasts" aria-live="polite"></div>
+        <div id="numbers" aria-hidden="true"></div>
+
+        <div id="bottom">
+          <nav id="slots" aria-label="Skill slots (keys 1-5)"></nav>
+          <p id="feedback" aria-live="polite"></p>
+          <div id="pad-wrap">
+            <div id="pad">
+              <canvas id="pad-guide" width="400" height="400" aria-hidden="true"></canvas>
+              <canvas id="pad-ink" width="400" height="400" aria-label="Sigil pad: trace the glyph here, tap above or below it for a kudlit"></canvas>
+            </div>
+            <div id="pad-buttons">
+              <button id="cast" class="primary" type="button">Cast <kbd>Enter</kbd></button>
+              <button id="undo" type="button">Undo <kbd>⌫</kbd></button>
+              <button id="clear" type="button">Clear</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="toolbar">
+          <button id="open-dict" type="button" aria-label="Dictionary (D)" title="Dictionary (D)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4zM20 4h-5a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h6z" fill="none" stroke="currentColor" stroke-width="2"/></svg><kbd>D</kbd></button>
+          <button id="mute" type="button" aria-label="Mute (M)" aria-pressed="false" title="Mute (M)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path id="mute-wave" d="M16 8a5 5 0 0 1 0 8" fill="none" stroke="currentColor" stroke-width="2"/></svg><kbd>M</kbd></button>
+          <button id="leave-btn" type="button" title="Leave the duel">Leave duel</button>
+          <button id="pause-btn" type="button" aria-label="Pause (Esc)" title="Pause (Esc)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3v14H7zM14 5h3v14h-3z" fill="currentColor"/></svg><kbd>Esc</kbd></button>
+        </div>
+      </div>
+
+      <!-- screens -->
+      <section id="title-screen" class="screen" aria-label="Title">
+        <div class="title-card">
+          <p class="title-glyphs" lang="tl-Tglg" aria-hidden="true">ᜊᜌ᜔ᜊᜌᜒᜈ᜔</p>
+          <h1>Baybay-Bout</h1>
+          <p class="tagline">A Babaylan defends the palayan at dusk. Write Baybayin to cast; read the Aswang's glyph to survive.</p>
+          <div class="menu">
+            <button id="start" class="primary" type="button">Duel the Aswang</button>
+            <button id="versus-btn" type="button">Duel a friend <small>· phones as sigil pads</small></button>
+            <button id="howto-btn" type="button">How to play</button>
+            <button id="title-dict" type="button">Dictionary</button>
+          </div>
+          <p class="fine"><a href="./prototype/">Practice all 17 letters</a> · desktop, mouse or pen</p>
+        </div>
+      </section>
+
+      <section id="lobby" class="screen" hidden role="dialog" aria-modal="true" aria-labelledby="lobby-title">
+        <div class="panel">
+          <h2 id="lobby-title">Duel a friend</h2>
+          <p class="lobby-step">On each phone, open <strong id="pad-url"></strong> and enter this code:</p>
+          <p id="pad-alternates" class="fine"></p>
+          <p id="room-code" class="room-code" aria-live="polite">····</p>
+          <p id="lan-hint" class="lan-hint" hidden>Phones can't reach this computer yet. Restart the game with <code>npm run dev:lan</code> (phones on the same Wi-Fi), then open this lobby again.</p>
+          <ol id="lobby-players" class="lobby-players"></ol>
+          <p id="lobby-status" class="lobby-status" aria-live="polite"></p>
+          <p class="fine">The first phone to join is Player 1 (red), the second Player 2 (indigo). Trace on the phone; watch the duel here.</p>
+          <button id="lobby-back" type="button">Back to title</button>
+        </div>
+      </section>
+
+      <section id="howto" class="screen" hidden role="dialog" aria-modal="true" aria-labelledby="howto-title">
+        <div class="panel">
+          <h2 id="howto-title">How to play</h2>
+          <ol class="steps">
+            <li><b>Pick a skill slot</b> (click it or press <kbd>1</kbd>–<kbd>5</kbd>). Its glyph appears as an outline on the sigil pad, with its stroke order playing.</li>
+            <li><b>Trace the glyph</b> inside the outline. Tap <b>above</b> it for a kudlit <i>-i</i>, <b>below</b> for <i>-u</i>, or nothing for <i>-a</i>. Each changes the spell.</li>
+            <li><b>Cast</b> with <kbd>Enter</kbd>. Accuracy and speed set the power; the slot then recharges.</li>
+            <li><b>Read the Aswang.</b> Its glyph floats above it before each spell lands. Raise a shield, or stun / knock it back to interrupt.</li>
+            <li><b>Master the glyphs.</b> Clean casts fade the outline; casting from memory hits up to ×1.45 harder.</li>
+          </ol>
+          <button class="primary close" type="button">Got it</button>
+        </div>
+      </section>
+
+      <section id="pause" class="screen" hidden role="dialog" aria-modal="true" aria-labelledby="pause-title">
+        <div class="panel small">
+          <h2 id="pause-title">Paused</h2>
+          <div class="menu">
+            <button id="resume" class="primary" type="button">Resume</button>
+            <button id="restart" type="button">Restart duel</button>
+            <button id="quit" type="button">Back to title</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="result" class="screen" hidden role="dialog" aria-modal="true" aria-labelledby="result-title">
+        <div class="panel small">
+          <p class="result-glyph" lang="tl-Tglg" aria-hidden="true" id="result-glyph"></p>
+          <h2 id="result-title"></h2>
+          <p id="result-text"></p>
+          <dl id="result-stats"></dl>
+          <div class="menu">
+            <button id="retry" class="primary" type="button">Duel again</button>
+            <button id="result-title-btn" type="button">Back to title</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="dictionary" class="screen" hidden role="dialog" aria-modal="true" aria-labelledby="dict-title">
+        <div class="panel wide">
+          <header><h2 id="dict-title">Diksiyonaryo</h2><p>The five glyphs you can cast. The duel is paused while this is open.</p></header>
+          <div id="dict-entries"></div>
+          <button class="primary close" type="button">Close <kbd>D</kbd></button>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

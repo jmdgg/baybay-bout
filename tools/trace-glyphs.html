@@ -1,0 +1,62 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Trace glyph templates</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Tagalog&display=swap">
+<!-- Serve the project root, open /tools/trace-glyphs.html, save the output as glyphs.json.
+     Traces every Baybayin letter from Noto Sans Tagalog (sample 0), keeping the real drawings already in glyphs.json. -->
+<p>Tracing… <textarea id="out" rows="30" cols="100" aria-label="Generated glyphs.json"></textarea>
+<script type="module">
+// Renders a glyph, thins it to 1px lines (Zhang-Suen), and walks the lines into ordered [x, y] strokes.
+function trace(ch, S = 160) {
+  const c = document.createElement('canvas'); c.width = c.height = S;
+  const ctx = c.getContext('2d');
+  Object.assign(ctx, { font: `${S * 0.6}px "Noto Sans Tagalog"`, textAlign: 'center', textBaseline: 'middle' });
+  ctx.fillText(ch, S / 2, S / 2);
+  const px = ctx.getImageData(0, 0, S, S).data;
+  const g = Array.from({ length: S * S }, (_, i) => px[i * 4 + 3] > 100 ? 1 : 0);
+  const at = (i, j) => i < 0 || j < 0 || i >= S || j >= S ? 0 : g[j * S + i];
+
+  for (let changed = true; changed;) {
+    changed = false;
+    for (const pass of [0, 1]) {
+      const del = [];
+      for (let j = 1; j < S - 1; j++) for (let i = 1; i < S - 1; i++) {
+        if (!at(i, j)) continue;
+        const p = [at(i, j - 1), at(i + 1, j - 1), at(i + 1, j), at(i + 1, j + 1), at(i, j + 1), at(i - 1, j + 1), at(i - 1, j), at(i - 1, j - 1)];
+        const B = p.reduce((a, b) => a + b), A = p.filter((v, k) => !v && p[(k + 1) % 8]).length;
+        const keep = pass ? p[0] * p[2] * p[6] || p[0] * p[4] * p[6] : p[0] * p[2] * p[4] || p[2] * p[4] * p[6];
+        if (B >= 2 && B <= 6 && A === 1 && !keep) del.push(j * S + i);
+      }
+      del.forEach(k => g[k] = 0);
+      changed ||= del.length > 0;
+    }
+  }
+
+  const neighbours = k => {
+    const i = k % S, j = (k / S) | 0;
+    return [[0, -1], [1, 0], [0, 1], [-1, 0], [1, -1], [1, 1], [-1, 1], [-1, -1]]
+      .filter(([a, b]) => at(i + a, j + b)).map(([a, b]) => (j + b) * S + i + a);
+  };
+  const strokes = [];
+  for (let left; (left = g.flatMap((v, k) => v ? [k] : [])).length;) {
+    let k = left.find(k => neighbours(k).length === 1) ?? left[0]; // start at a line end when there is one
+    const s = [];
+    while (k !== undefined) { g[k] = 0; s.push([k % S, (k / S) | 0]); k = neighbours(k)[0]; }
+    if (s.length >= 12) strokes.push(s.filter((_, i) => i % 5 === 0 || i === s.length - 1)); // drop specks under 12px, or they read as a kudlit
+  }
+  return strokes;
+}
+
+await document.fonts.load('96px "Noto Sans Tagalog"', 'ᜀ');
+// Unicode Baybayin U+1700–U+1711; U+170D (a modern RA) is skipped
+const roots = ['a', 'i', 'u', 'ka', 'ga', 'nga', 'ta', 'da', 'na', 'pa', 'ba', 'ma', 'ya', null, 'la', 'wa', 'sa', 'ha'];
+const letters = roots.map((root, i) => root && { glyph: String.fromCodePoint(0x1700 + i), root }).filter(Boolean);
+// sample 0 is the font; samples after it are real player drawings added by hand, so keep them, and the stroke order
+const current = await (await fetch("../glyphs.json", { cache: "no-cache" })).json().catch(() => []);
+for (const l of letters) {
+  const old = current.find(c => c.glyph === l.glyph);
+  l.samples = [trace(l.glyph), ...(old?.samples.slice(1) || [])];
+  if (old?.order) l.order = old.order; // recorded stroke order (tools/stroke-order.html)
+}
+document.getElementById('out').value = '[\n' + letters.map(l => '  ' + JSON.stringify(l)).join(',\n') + '\n]\n';
+</script>

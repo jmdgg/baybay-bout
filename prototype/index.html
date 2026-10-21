@@ -1,0 +1,262 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Baybay-Bout</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23d9a441'/%3E%3Cpath d='M20 22c8-6 24-6 24 8s-16 16-24 10' stroke='%231b1410' stroke-width='6' fill='none'/%3E%3C/svg%3E" />
+<style>
+  body { background: #1b1410; color: #f3e6d0; font-family: 'Noto Sans Tagalog', system-ui; text-align: center; }
+  table { margin: 1em auto; border-collapse: collapse; }
+  th, td { border: 1px solid #5a4632; padding: .3em .7em; }
+  td span { display: block; font-size: 1.8em; }
+  tr.spell { background: #3a2a1a; }
+  #battle { display: flex; justify-content: center; gap: 2em; flex-wrap: wrap; }
+  #battle meter { width: 10em; height: 1.2em; }
+  #log { list-style: none; padding: 0; min-height: 6em; opacity: .85; }
+  #spellbook { display: flex; justify-content: center; gap: .5em; flex-wrap: wrap; margin: .5em 0; }
+  .slot { background: #2a1f17; color: inherit; font: inherit; border: 2px solid #5a4632; padding: .3em .6em; font-size: .8em; cursor: pointer; }
+  .slot[aria-pressed="true"] { border-color: #e8b04a; background: #3a2a1a; }
+  .slot span { display: block; font-size: 3em; line-height: 1.2; }
+  .slot small { display: block; color: #e8b04a; }
+  .slot.recharging span { opacity: .35; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  #incoming { font-size: 2.6em; line-height: 1.2; min-height: 1.2em; color: #ff8a65; }
+  .pad { position: relative; display: inline-block; border: 2px solid #e8b04a; line-height: 0; max-width: 100%; }
+  .pad canvas { max-width: 100%; height: auto; }
+  #guide { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  #c { position: relative; } /* ink sits on top of the guide */
+</style>
+<body>
+<p><button id="fight">Start mock battle</button></p>
+<section id="arena" hidden aria-label="Mock battle">
+  <div id="battle">
+    <div><strong>You</strong><br><meter id="playerHp" min="0" max="100" low="30" optimum="100"></meter><br><small id="playerStatus"></small></div>
+    <div><strong>Aswang</strong><br><meter id="enemyHp" min="0" max="100" low="30" optimum="100"></meter><br><small id="enemyStatus"></small>
+      <div id="incoming" aria-live="assertive"></div><small id="incomingTime"></small></div>
+  </div>
+  <ol id="log" aria-live="polite"></ol>
+  <div id="spellbook" role="group" aria-label="Skill slots: pick one (keys 1-5), trace its outline, then Cast"></div>
+</section>
+<div class="pad">
+  <canvas id="guide" width="400" height="400" aria-hidden="true"></canvas>
+  <canvas id="c" width="400" height="400" aria-label="Spell drawing area"></canvas>
+</div>
+<p>
+  <button id="cast">Cast</button>
+  <button id="undo">Undo stroke</button>
+  <button id="clear">Clear</button>
+</p>
+<p id="out" aria-live="polite">Draw a Baybayin glyph, tap above or below it to add a kudlit, then press Cast. Or start a battle to trace glyphs from skill slots.</p>
+<p>
+  <label>Teach my handwriting: <select id="teach"><option value="">off (cast spells)</option></select></label>
+  <button id="forget">Forget my samples &amp; progress</button>
+</p>
+<table>
+  <caption>Baybayin dictionary: kudlit above = i/e, below = u/o, krus-kudlit (᜔) removes the vowel</caption>
+  <thead><tr><th scope="col">a</th><th scope="col">i / e</th><th scope="col">u / o</th><th scope="col">no vowel</th><th scope="col">Spell</th></tr></thead>
+  <tbody id="dict"></tbody>
+</table>
+<script type="module">
+import '@fontsource/noto-sans-tagalog'; // bundled font: works offline
+import { createRecorder, recognize, splitKudlit } from '../src/gesture.js';
+import { finalPower, MIN_ACCURACY, MASTERY_BONUS } from '../src/power.js';
+import { createBattle, castSpell, tick, rechargeLeft } from '../src/battle.js';
+import { createGuide, MASTERY, nextMastery } from '../src/guide.js';
+
+// imported (not fetched) so Vite bundles the data into the production build too
+import letters from '../glyphs.json';
+import spellsData from '../spells.json';
+const { spells } = spellsData;
+const spellFor = letter => spells.find(s => s.glyph === letter.glyph);
+const $ = id => document.getElementById(id);
+const out = $('out');
+
+// dictionary, built from the same letters the recognizer knows
+const cell = (glyph, latin) => `<td><span lang="tl-Tglg">${glyph}</span>${latin}</td>`;
+const isVowel = l => l.root.length === 1;
+$('dict').innerHTML =
+  `<tr>${letters.filter(isVowel).map(l => cell(l.glyph, { a: 'a', i: 'i / e', u: 'u / o' }[l.root])).join('')}<td></td><td></td></tr>` +
+  letters.filter(l => !isVowel(l)).map(l => {
+    const g = l.glyph, c = l.root.slice(0, -1), spell = spellFor(l);
+    return `<tr${spell ? ' class="spell"' : ''}>${cell(g, l.root)}${cell(g + 'ᜒ', c + 'i')}${cell(g + 'ᜓ', c + 'u')}`
+      + `${cell(g + '᜔', c)}<td>${spell ? `${spell.name} (${spell.element})` : ''}</td></tr>`;
+  }).join('');
+
+const rec = createRecorder($('c'));
+window.rec = rec; // devtools: copy(JSON.stringify(rec.strokes)) to inspect a drawing
+// shortcut: last 30 real drawings kept in memory to calibrate thresholds; devtools: copy(JSON.stringify(attempts))
+const attempts = window.attempts = [];
+$('cast').onclick = cast;
+$('undo').onclick = () => rec.undo();
+$('clear').onclick = () => rec.clear();
+
+// Player handwriting samples per letter. They only help recognize the letter, never raise accuracy. Per browser only.
+const KEY = 'baybay-bout-handwriting', MAX_MINE = 5;
+let mine = {};
+try { mine = JSON.parse(localStorage.getItem(KEY)) || {}; } catch {}
+for (const l of letters) {
+  l.mine = mine[l.glyph] || [];
+  $('teach').add(new Option(`${l.glyph} ${l.root}${spellFor(l) ? ': ' + spellFor(l).name : ''}`, l.glyph));
+}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(mine)); } catch {} };
+// Per-glyph mastery: how much tracing help the outline gives (0 = full outline + stroke order ... 3 = from memory)
+const MASTERY_KEY = 'baybay-bout-mastery';
+let mastery = {};
+try { mastery = JSON.parse(localStorage.getItem(MASTERY_KEY)) || {}; } catch {}
+const saveMastery = () => { try { localStorage.setItem(MASTERY_KEY, JSON.stringify(mastery)); } catch {} };
+$('forget').onclick = () => {
+  mine = {}; save();
+  mastery = {}; saveMastery();
+  letters.forEach(l => l.mine = []);
+  if (slot) showGuide(slot);
+  out.textContent = 'Your handwriting samples and outline progress were removed.';
+};
+
+function learn(letter) {
+  const drawn = splitKudlit(rec.strokes);
+  // reject a sample that already looks like another letter, or it would make both letters misread
+  const clash = drawn && recognize(drawn.glyph, letters.filter(l => l !== letter));
+  if (!drawn) out.textContent = 'Nothing to read. Draw a larger glyph.';
+  else if (clash?.accuracy >= MIN_ACCURACY) out.textContent = `Not saved: that looks too much like ${clash.letter.glyph} (${clash.letter.root}). Compare with the dictionary and try again.`;
+  else {
+    letter.mine = mine[letter.glyph] = [...letter.mine, drawn.glyph].slice(-MAX_MINE);
+    save();
+    out.textContent = `Saved sample ${letter.mine.length}/${MAX_MINE} for ${letter.glyph} (${letter.root}). 3 or more samples work best.`;
+  }
+  rec.clear();
+}
+
+function cast() {
+  const teaching = letters.find(l => l.glyph === $('teach').value);
+  if (teaching) return learn(teaching);
+  if (!rec.strokes.length) { out.textContent = 'Draw a new glyph first, then press Cast.'; return; }
+  // practice: free drawing, read against all 17 letters; battle: the selected skill slot says which glyph
+  const inBattle = battle && !battle.winner;
+  if (inBattle) return castSlot();
+  const r = recognize(rec.strokes, letters);
+  attempts.unshift({ strokes: rec.strokes, inBattle, result: r && { letter: r.letter.root, accuracy: r.accuracy, ambiguous: r.ambiguous } });
+  attempts.length = Math.min(attempts.length, 30);
+  if (!r) { out.textContent = 'Too small to read. Draw a larger glyph.'; return; }
+
+  const spell = !r.ambiguous && spellFor(r.letter);
+  const power = spell ? finalPower(spell.variations[r.vowel].baseDamage, r.accuracy, rec.duration, spell.parTimeMs) : 0;
+  out.textContent =
+    r.ambiguous ? `Unclear: ${r.letter.glyph} (${r.letter.root}) or ${r.runnerUp.glyph} (${r.runnerUp.root})? Redraw it more clearly.`
+    : !spell ? `${r.glyph} = "${r.syllable}" · accuracy ${r.accuracy}%. Correct letter, but not a spell yet.`
+    : `${r.glyph} = "${r.syllable}" → ${spell.name} (${spell.variations[r.vowel].effect}) · accuracy ${r.accuracy}% · `
+      + (power ? `power ${power}` : 'fizzled');
+  if (!r.ambiguous) rec.overlay(r.letter.samples[0]); // green = the letter as the font writes it
+  rec.clear(true);
+}
+
+// Mock battle: one Aswang casting on a timer while you draw.
+// Each spell sits in a skill slot: pick a slot, trace the glyph's outline on the canvas, add a kudlit, Cast.
+let battle = null, loop = 0, slot = null, shownIncoming = null;
+const guide = createGuide($('guide'));
+const levelOf = s => mastery[s.glyph] || 0;
+const showGuide = s => { const l = letterOf(s); guide.show(l.samples[0], { ...MASTERY[levelOf(s)], order: l.order }); };
+const letterOf = spell => letters.find(l => l.glyph === spell.glyph);
+const effects = s => `${s.variations.a.effect} · above: ${s.variations.i.effect} · below: ${s.variations.u.effect}`;
+const slots = spells.map((s, i) => {
+  const b = Object.assign(document.createElement('button'), { className: 'slot', onclick: () => selectSlot(s) });
+  b.append(`${i + 1}`, Object.assign(document.createElement('span'), { lang: 'tl-Tglg', textContent: s.glyph }),
+    `${s.root} · ${s.name}`, document.createElement('br'), effects(s), document.createElement('small'));
+  return b;
+});
+$('spellbook').replaceChildren(...slots);
+document.addEventListener('keydown', e => {
+  const s = battle && !battle.winner && e.target.tagName !== 'SELECT' && spells[e.key - 1];
+  if (s) selectSlot(s);
+});
+
+function selectSlot(s) {
+  slot = s;
+  rec.clear();
+  showGuide(s); // the font shape, so tracing it lands close to the template
+  slots.forEach((b, i) => b.setAttribute('aria-pressed', spells[i] === s));
+  out.textContent = (levelOf(s) === MASTERY.length - 1 ? `Draw ${s.glyph} (${s.root}) from memory.` : `Trace ${s.glyph} (${s.root}) inside the outline.`)
+    + ' Tap above it for -i or below for -u, then Cast.';
+}
+
+function castSlot() {
+  const now = performance.now(), me = battle.player;
+  if (!slot) { out.textContent = 'Pick a skill slot first (click one or press 1-5).'; return; }
+  // blocked casts keep the drawing, so the player can cast it once ready
+  if (now < me.stunnedUntil) { out.textContent = 'You are stunned! Your glyph is kept; press Cast again in a moment.'; return; }
+  const wait = rechargeLeft(me, slot, now);
+  if (wait) { out.textContent = `${slot.glyph} is recharging (${(Math.ceil(wait / 100) / 10).toFixed(1)} s). Your glyph is kept; cast it then, or pick another slot.`; return; }
+
+  const letter = letterOf(slot), r = recognize(rec.strokes, [letter]); // the slot says which glyph: just score how close it is
+  attempts.unshift({ strokes: rec.strokes, inBattle: true, result: r && { letter: letter.root, accuracy: r.accuracy } });
+  attempts.length = Math.min(attempts.length, 30);
+  if (!r) { out.textContent = 'Too small to read. Trace the whole outline.'; return; }
+  const v = slot.variations[r.vowel];
+  const level = levelOf(slot); // the outline help you had for this cast; less help pays more
+  const power = finalPower(v.baseDamage, r.accuracy, rec.duration, slot.parTimeMs, level);
+  out.textContent = `${r.glyph} = "${r.syllable}" → ${slot.name} (${v.effect}) · accuracy ${r.accuracy}% · `
+    + (power ? `power ${power}${level ? ` (mastery ×${(1 + MASTERY_BONUS * level).toFixed(2)})` : ''}` : 'fizzled, stay inside the outline and try again');
+  if (power) castSpell(battle, 'player', slot, r.vowel, power, now);
+  mastery[slot.glyph] = nextMastery(level, r.accuracy, power);
+  saveMastery();
+  if (mastery[slot.glyph] !== level) {
+    out.textContent += mastery[slot.glyph] > level ? ' · the outline fades' : ' · the outline returns';
+    showGuide(slot);
+  }
+  rec.overlay(letter.samples[0]);
+  rec.clear(true);
+  render();
+}
+
+$('fight').onclick = () => {
+  battle = createBattle(spells, performance.now());
+  $('arena').hidden = false;
+  $('teach').value = '';
+  $('fight').textContent = 'Restart battle';
+  selectSlot(spells[0]);
+  clearInterval(loop);
+  let last = performance.now();
+  loop = setInterval(() => {
+    // pass the real elapsed time: browsers slow timers in background tabs, and burns must still deal full damage
+    const now = performance.now();
+    tick(battle, now, now - last);
+    last = now;
+    render();
+    if (battle.winner) { clearInterval(loop); slot = null; guide.hide(); } // back to free drawing
+  }, 100);
+  render();
+};
+
+function render() {
+  const now = performance.now();
+  for (const who of ['player', 'enemy']) {
+    const f = battle[who];
+    $(who + 'Hp').value = f.hp;
+    $(who + 'Status').textContent = [
+      `${Math.ceil(f.hp)} HP`,
+      now < f.shieldUntil && f.shield > 0 && `shield ${f.shield}`,
+      now < f.stunnedUntil && 'stunned',
+      now < f.slowedUntil && 'slowed',
+      f.burns.length && 'burning',
+    ].filter(Boolean).join(' · ');
+  }
+  slots.forEach((b, i) => {
+    const left = rechargeLeft(battle.player, spells[i], now);
+    b.classList.toggle('recharging', left > 0);
+    const level = levelOf(spells[i]);
+    b.lastChild.textContent = (left ? `recharging ${(Math.ceil(left / 100) / 10).toFixed(1)} s` : 'ready')
+      + ` · mastery ${level}/${MASTERY.length - 1}`;
+  });
+  // incoming Aswang spell: glyph only, so the player must read it (the spellbook cards show what each glyph does)
+  const c = battle.enemyCasting;
+  if (c !== shownIncoming) {
+    shownIncoming = c;
+    $('incoming').replaceChildren(...(c ? [
+      Object.assign(document.createElement('span'), { lang: 'tl-Tglg', ariaHidden: 'true', textContent: c.spell.glyph + ({ i: 'ᜒ', u: 'ᜓ' }[c.vowel] || '') }),
+      // screen readers can't read the glyph itself, so they hear the syllable
+      Object.assign(document.createElement('span'), { className: 'sr', textContent: `Aswang casts ${c.spell.root.slice(0, -1) + c.vowel}` }),
+    ] : []));
+  }
+  $('incomingTime').textContent = c ? `incoming in ${(Math.max(0, c.landsAt - now) / 1000).toFixed(1)} s: shield, or stun to interrupt` : '';
+  const lines = battle.winner ? [battle.winner === 'player' ? 'The Aswang is banished. You win!' : 'The Aswang wins. Restart to try again.', ...battle.log] : battle.log;
+  $('log').replaceChildren(...lines.slice(0, 6).map(text => Object.assign(document.createElement('li'), { textContent: text })));
+}
+</script>

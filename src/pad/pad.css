@@ -1,0 +1,52 @@
+:root { --ink: #1b1410; --panel: #241912; --line: rgba(217, 164, 65, 0.45); --gold: #d9a441; --gold-hi: #f3d282; --cream: #f6ead2; --muted: #c4b293; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: var(--ink); color: var(--cream); font-family: 'Alegreya Sans', system-ui, sans-serif; overflow: hidden; overscroll-behavior: none; }
+[hidden] { display: none !important; }
+[lang='tl-Tglg'] { font-family: 'Noto Sans Tagalog', serif; }
+#pad-app { height: 100%; padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); display: flex; flex-direction: column; }
+
+button { font: 700 1.05rem 'Alegreya Sans', sans-serif; color: var(--cream); background: #33241a; border: 1px solid var(--line); border-radius: 12px; min-height: 48px; padding: 0 16px; touch-action: manipulation; }
+button.primary { background: linear-gradient(180deg, #e0ad4c, #b9852c); color: #241708; border-color: var(--gold-hi); }
+button:active { transform: translateY(1px); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
+
+#join { margin: auto 0; display: flex; flex-direction: column; gap: 14px; }
+#join .glyphs { font-size: 34px; color: var(--gold-hi); margin: 0; }
+#join h1 { font: 800 2.2rem 'Alegreya', serif; margin: 0; }
+#join .hint { margin: 0; color: var(--muted); line-height: 1.4; }
+#join label { display: flex; flex-direction: column; gap: 6px; font-weight: 700; }
+#join input { font: 700 1.4rem 'Alegreya Sans', sans-serif; padding: 10px 12px; min-height: 52px; border-radius: 10px; border: 1px solid var(--line); background: #120d0a; color: var(--cream); }
+#code { text-transform: uppercase; letter-spacing: 0.3em; text-align: center; font-size: 2rem !important; }
+#join-error { min-height: 1.4em; margin: 0; color: #ff9c8a; }
+
+#play { flex: 1; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+#bars { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; }
+#bars span { font-weight: 800; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+#bars small { color: var(--muted); font-size: 0.78rem; min-height: 1em; display: block; }
+.hp { height: 12px; border-radius: 6px; background: rgba(0, 0, 0, 0.6); overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.1); }
+.hp div { height: 100%; width: 100%; transition: width 0.2s; background: linear-gradient(90deg, #b8352d, #e2603c); }
+.p2 .me .hp div, .p1 .them .hp div { background: linear-gradient(90deg, #3b3f9a, #6f74d8); }
+#banner { margin: 0; text-align: center; font: 700 1.05rem 'Alegreya', serif; color: var(--gold-hi); min-height: 1.3em; }
+#opponent { margin: 0; text-align: center; color: var(--muted); font-size: 0.9rem; min-height: 1.2em; }
+#opponent .gl { font-family: 'Noto Sans Tagalog', serif; font-size: 1.4em; color: #c9cbff; }
+
+#slots { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.slot { position: relative; min-height: 64px; padding: 4px 2px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; border-radius: 12px; }
+.slot[aria-pressed='true'] { border: 2px solid var(--gold-hi); background: #4a3420; }
+.slot .g { font-family: 'Noto Sans Tagalog', serif; font-size: 28px; line-height: 1.1; }
+.slot .r { font-size: 0.72rem; color: var(--muted); }
+.slot .pips { display: flex; gap: 2px; margin-top: 2px; }
+.slot .pips i { width: 5px; height: 5px; border-radius: 50%; border: 1px solid var(--gold); }
+.slot .pips i.on { background: var(--gold-hi); }
+.slot .cd { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 800; background: conic-gradient(rgba(8, 5, 3, 0.75) calc(var(--cd, 0) * 360deg), transparent 0); }
+
+#pad { position: relative; width: min(92vw, 50vh); aspect-ratio: 1; margin: 0 auto; border-radius: 50%; border: 2px solid var(--gold);
+  background: radial-gradient(circle at 50% 45%, #34261a, #120c09 70%); overflow: hidden; flex: none; }
+#pad canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#pad-guide { pointer-events: none; }
+#pad-ink { touch-action: none; }
+#buttons { display: grid; grid-template-columns: 1fr 1.6fr 1fr; gap: 8px; }
+#cast { font-size: 1.25rem; }
+#feedback { margin: 0; text-align: center; font-size: 0.95rem; line-height: 1.3; min-height: 2.6em; }
+#feedback .gl { font-family: 'Noto Sans Tagalog', serif; font-size: 1.3em; color: var(--gold-hi); }
+#rematch { width: 100%; }

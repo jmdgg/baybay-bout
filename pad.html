@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#1b1410" />
+    <title>Baybay-Bout · Sigil pad</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23d9a441'/%3E%3Cpath d='M20 22c8-6 24-6 24 8s-16 16-24 10' stroke='%231b1410' stroke-width='6' fill='none'/%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <main id="pad-app">
+      <form id="join" autocomplete="off">
+        <p class="glyphs" lang="tl-Tglg" aria-hidden="true">ᜊᜌ᜔ᜊᜌᜒᜈ᜔</p>
+        <h1>Join a duel</h1>
+        <p class="hint">Enter the code shown on the big screen. The first to join is Player 1.</p>
+        <label>Room code <input id="code" name="code" maxlength="4" inputmode="text" autocapitalize="characters" spellcheck="false" required /></label>
+        <label>Your name <input id="name" name="name" maxlength="16" spellcheck="false" placeholder="optional" /></label>
+        <button class="primary" type="submit">Join</button>
+        <p id="join-error" role="alert"></p>
+      </form>
+
+      <section id="play" hidden>
+        <header id="bars">
+          <div class="me"><span id="me-name"></span><div class="hp"><div id="me-fill"></div></div><small id="me-status"></small></div>
+          <div class="them"><span id="them-name"></span><div class="hp"><div id="them-fill"></div></div><small id="them-status"></small></div>
+        </header>
+        <p id="banner" aria-live="polite"></p>
+        <p id="opponent" aria-live="polite"></p>
+        <nav id="slots" aria-label="Skill slots"></nav>
+        <div id="pad">
+          <canvas id="pad-guide" width="400" height="400" aria-hidden="true"></canvas>
+          <canvas id="pad-ink" width="400" height="400" aria-label="Sigil pad: trace the glyph, tap above or below it for a kudlit"></canvas>
+        </div>
+        <div id="buttons">
+          <button id="undo" type="button">Undo</button>
+          <button id="cast" class="primary" type="button">Cast</button>
+          <button id="clear" type="button">Clear</button>
+        </div>
+        <p id="feedback" aria-live="polite"></p>
+        <button id="rematch" class="primary" type="button" hidden>Rematch</button>
+      </section>
+    </main>
+    <script type="module" src="/src/pad/main.ts"></script>
+  </body>
+</html>

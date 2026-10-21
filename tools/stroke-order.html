@@ -1,0 +1,86 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Record stroke order</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Tagalog&display=swap">
+<!-- Serve the project root, open /tools/stroke-order.html. Pick a letter, trace its outline in the stroke order and
+     direction it should be written, name each stroke's type, Save letter. Repeat, then save the output as glyphs.json.
+     The battle outline replays these strokes in a loop. -->
+<style>
+  body { background: #1b1410; color: #f3e6d0; font-family: 'Noto Sans Tagalog', system-ui; text-align: center; }
+  .pad { position: relative; display: inline-block; border: 2px solid #e8b04a; line-height: 0; max-width: 100%; }
+  .pad canvas { max-width: 100%; height: auto; }
+  #guide { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  #c { position: relative; }
+  #types { display: inline-block; text-align: left; }
+  textarea { width: min(90vw, 60em); }
+</style>
+<p><label>Letter: <select id="letter"></select></label></p>
+<div class="pad">
+  <canvas id="guide" width="400" height="400" aria-hidden="true"></canvas>
+  <canvas id="c" width="400" height="400" aria-label="Trace the letter here, in stroke order"></canvas>
+</div>
+<p>
+  <button id="undo">Undo stroke</button>
+  <button id="clear">Clear</button>
+  <button id="save">Save letter</button>
+  <button id="remove">Remove this letter's order</button>
+</p>
+<p id="msg" aria-live="polite"></p>
+<ol id="types"></ol>
+<p><label>glyphs.json (save over the file when done):<br><textarea id="out" rows="8"></textarea></label></p>
+<script type="module">
+import { createRecorder } from '../src/gesture.js';
+import { createGuide, fitToCanvas, STROKE_TYPES } from '../src/guide.js';
+
+const $ = id => document.getElementById(id);
+const letters = await (await fetch('../glyphs.json', { cache: 'no-cache' })).json();
+const rec = createRecorder($('c')), guide = createGuide($('guide'));
+const letter = () => letters[$('letter').value];
+letters.forEach((l, i) => $('letter').add(new Option(`${l.glyph} ${l.root}${l.order ? ' ✓' : ''}`, i)));
+
+const output = () => $('out').value = '[\n' + letters.map(l => '  ' + JSON.stringify(l)).join(',\n') + '\n]\n';
+const preview = () => guide.show(letter().samples[0], { order: letter().order, animate: true });
+function pick() {
+  rec.clear();
+  preview();
+  types();
+  $('msg').textContent = letter().order ? 'This letter has a stroke order (playing). Trace again to replace it.' : 'Trace the outline in stroke order.';
+}
+// one type picker per traced stroke; earlier choices survive adding strokes
+function types() {
+  const kept = [...$('types').querySelectorAll('select')].map(s => s.value);
+  $('types').replaceChildren(...rec.strokes.map((_, i) => {
+    const sel = document.createElement('select');
+    sel.add(new Option('choose type…', ''));
+    for (const [name, hint] of Object.entries(STROKE_TYPES)) sel.add(new Option(`${name}: ${hint}`, name));
+    sel.value = kept[i] || '';
+    const li = document.createElement('li');
+    li.append(`Stroke ${i + 1}: `, sel);
+    return li;
+  }));
+}
+
+$('letter').onchange = pick;
+$('c').addEventListener('pointerdown', () => { if (!rec.strokes.length) guide.show(letter().samples[0]); }); // still outline while tracing
+$('c').addEventListener('pointerup', types);
+$('undo').onclick = () => { rec.undo(); types(); };
+$('clear').onclick = () => { rec.clear(); types(); };
+$('remove').onclick = () => { delete letter().order; $('letter').selectedOptions[0].text = `${letter().glyph} ${letter().root}`; output(); pick(); };
+$('save').onclick = () => {
+  const chosen = [...$('types').querySelectorAll('select')].map(s => s.value);
+  if (!rec.strokes.length) return $('msg').textContent = 'Trace the letter first.';
+  if (chosen.includes('')) return $('msg').textContent = 'Choose a type for every stroke.';
+  const { from } = fitToCanvas(letter().samples[0], $('c'));
+  letter().order = rec.strokes.map((s, i) => ({
+    type: chosen[i],
+    points: s.filter((_, k) => k % 3 === 0 || k === s.length - 1).map(p => from(p).map(Math.round)),
+  }));
+  $('letter').selectedOptions[0].text = `${letter().glyph} ${letter().root} ✓`;
+  output();
+  pick();
+  $('msg').textContent = `Saved ${letter().order.length} strokes for ${letter().glyph}. Pick the next letter, then save the output as glyphs.json.`;
+};
+output();
+pick();
+</script>

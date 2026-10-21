@@ -1,0 +1,7 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "baybay-bout-3d", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 5188 },
+    { "name": "baybay-bout", "runtimeExecutable": "python", "runtimeArgs": ["tools/serve.py", "8123"], "port": 8123 }
+  ]
+}

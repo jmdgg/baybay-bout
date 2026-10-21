@@ -1,0 +1,55 @@
+{
+  "$schema": "./spells.schema.json",
+  "spells": [
+    {
+      "id": "baga", "name": "Baga ni Apolaki", "element": "apoy",
+      "lore": "Ember of Apolaki, god of the sun and war. BA, first syllable of baga (ember).",
+      "root": "ba", "glyph": "ᜊ", "parTimeMs": 1400, "rechargeMs": 5000,
+      "variations": {
+        "a": { "effect": "projectile", "baseDamage": 20, "note": "Ember bolt" },
+        "i": { "effect": "burn", "baseDamage": 26, "durationMs": 4000, "note": "Damage spread over the duration" },
+        "u": { "effect": "knockback", "baseDamage": 14, "note": "Solar flare pushes the rival back" }
+      }
+    },
+    {
+      "id": "tubig", "name": "Alon ni Aman Sinaya", "element": "tubig",
+      "lore": "Tide of Aman Sinaya, goddess of the sea. TA, first syllable of tubig (water).",
+      "root": "ta", "glyph": "ᜆ", "parTimeMs": 1600, "rechargeMs": 6000,
+      "variations": {
+        "a": { "effect": "slow", "baseDamage": 12, "durationMs": 2000, "note": "Undertow" },
+        "i": { "effect": "heal", "baseDamage": 18, "note": "Healing spring" },
+        "u": { "effect": "shield", "baseDamage": 22, "durationMs": 3000, "note": "Tidal wall" }
+      }
+    },
+    {
+      "id": "simoy", "name": "Simoy ni Amihan", "element": "hangin",
+      "lore": "Breeze of Amihan, the bird of the northeast wind. SA with a kudlit above reads si, first syllable of simoy (breeze).",
+      "root": "sa", "glyph": "ᜐ", "parTimeMs": 1800, "rechargeMs": 5000,
+      "variations": {
+        "a": { "effect": "knockback", "baseDamage": 18, "note": "Gale" },
+        "i": { "effect": "projectile", "baseDamage": 22, "note": "Cutting breeze" },
+        "u": { "effect": "slow", "baseDamage": 10, "durationMs": 2500, "note": "Headwind" }
+      }
+    },
+    {
+      "id": "lupa", "name": "Bantay ng Babaylan", "element": "lupa",
+      "lore": "Earth ward a babaylan raises with the help of the anito. LA, first syllable of lupa (earth).",
+      "root": "la", "glyph": "ᜎ", "parTimeMs": 1800, "rechargeMs": 8000,
+      "variations": {
+        "a": { "effect": "shield", "baseDamage": 30, "durationMs": 3000, "note": "Stone ward" },
+        "i": { "effect": "stun", "baseDamage": 6, "durationMs": 1000, "note": "Roots bind the rival's feet" },
+        "u": { "effect": "projectile", "baseDamage": 24, "note": "Slow, heavy boulder" }
+      }
+    },
+    {
+      "id": "kidlat", "name": "Kidlat ni Bathala", "element": "kidlat",
+      "lore": "Lightning of Bathala, the supreme deity. KA, first syllable of kidlat (lightning).",
+      "root": "ka", "glyph": "ᜃ", "parTimeMs": 2000, "rechargeMs": 7000,
+      "variations": {
+        "a": { "effect": "projectile", "baseDamage": 26, "note": "Hardest glyph, strongest bolt" },
+        "i": { "effect": "stun", "baseDamage": 10, "durationMs": 1200, "note": "Thunderclap" },
+        "u": { "effect": "slow", "baseDamage": 14, "durationMs": 1500, "note": "Numbing shock" }
+      }
+    }
+  ]
+}
